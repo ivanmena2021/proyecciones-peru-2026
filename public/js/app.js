@@ -174,7 +174,20 @@ function renderTopCandidates(d) {
   if (!container || !d.candidates) return;
 
   const top = d.candidates.slice(0, 8);
-  container.innerHTML = top.map((c, i) => `
+
+  // Compute trend from history (last 5 points)
+  const trends = computeTrends(top);
+
+  container.innerHTML = top.map((c, i) => {
+    const trend = trends[c.code] || { arrow: '', delta: 0, label: '' };
+    const diff = c.projectedPct - c.pct;
+    const diffSign = diff >= 0 ? '+' : '';
+    const diffClass = diff > 0.2 ? 'trend-up' : diff < -0.2 ? 'trend-down' : 'trend-stable';
+
+    // Votes needed to catch the candidate above
+    const votesGap = i > 0 ? computeVotesGap(top[i - 1], c, d) : null;
+
+    return `
     <div class="candidate-card" style="--accent: ${c.color}">
       <div class="candidate-rank">#${i + 1}</div>
       <div class="candidate-party-badge" style="background: ${c.color}">${c.partyShort}</div>
@@ -182,21 +195,86 @@ function renderTopCandidates(d) {
       <div class="candidate-party-full">${c.party}</div>
       <div class="candidate-stats">
         <div class="stat-row">
-          <span class="stat-label">Actual</span>
+          <span class="stat-label">Actual ONPE</span>
           <span class="stat-value">${formatPct(c.pct)}</span>
         </div>
         <div class="stat-row projected">
           <span class="stat-label">Proyectado</span>
           <span class="stat-value stat-projected">${formatPct(c.projectedPct)}</span>
         </div>
+        <div class="stat-row">
+          <span class="stat-label">Tendencia</span>
+          <span class="stat-value ${diffClass}">${trend.arrow} ${diffSign}${diff.toFixed(2)}pp</span>
+        </div>
         <div class="stat-row ci">
           <span class="stat-label">IC 95%</span>
-          <span class="stat-value stat-ci">${formatPct(c.marginLow, 1)} — ${formatPct(c.marginHigh, 1)}</span>
+          <span class="stat-value stat-ci">${formatPct(c.marginLow, 1)} &mdash; ${formatPct(c.marginHigh, 1)}</span>
         </div>
       </div>
-      <div class="candidate-votes">${formatNumber(c.votes)} votos</div>
-    </div>
-  `).join('');
+      ${votesGap !== null ? `
+      <div class="votes-gap">
+        Le faltan <strong>${formatNumber(votesGap)}</strong> votos para alcanzar a #${i}
+      </div>` : `
+      <div class="votes-gap votes-leader">L&iacute;der de la proyecci&oacute;n</div>`}
+      <div class="candidate-votes">${formatNumber(c.votes)} votos contados</div>
+    </div>`;
+  }).join('');
+}
+
+/**
+ * Compute trend arrows from history data.
+ * Compares current projection vs average of last 5 history points.
+ */
+function computeTrends(candidates) {
+  const trends = {};
+  if (!state.history || state.history.length < 3) {
+    for (const c of candidates) {
+      trends[c.code] = { arrow: '&bull;', delta: 0 };
+    }
+    return trends;
+  }
+
+  // Get last 5 history points
+  const recent = state.history.slice(-5);
+
+  for (const c of candidates) {
+    const pastValues = recent
+      .map(p => p.candidates?.find(x => x.code === c.code)?.projectedPct)
+      .filter(v => v != null);
+
+    if (pastValues.length < 2) {
+      trends[c.code] = { arrow: '&bull;', delta: 0 };
+      continue;
+    }
+
+    const avgPast = pastValues.reduce((a, b) => a + b, 0) / pastValues.length;
+    const delta = c.projectedPct - avgPast;
+
+    let arrow;
+    if (delta > 0.3) arrow = '&#9650;&#9650;'; // ▲▲ strong up
+    else if (delta > 0.1) arrow = '&#9650;';     // ▲ up
+    else if (delta < -0.3) arrow = '&#9660;&#9660;'; // ▼▼ strong down
+    else if (delta < -0.1) arrow = '&#9660;';    // ▼ down
+    else arrow = '&#9654;';                       // ▶ stable
+
+    trends[c.code] = { arrow, delta };
+  }
+
+  return trends;
+}
+
+/**
+ * Compute how many projected votes a candidate needs to catch the one above.
+ * Uses projected percentages and estimated total valid votes.
+ */
+function computeVotesGap(above, current, d) {
+  if (!d.totals) return null;
+  // Estimate total valid votes when 100% counted
+  const totalValidEstimate = d.totals.totalVotesValid / (d.pctCounted / 100);
+  const aboveVotes = totalValidEstimate * (above.projectedPct / 100);
+  const currentVotes = totalValidEstimate * (current.projectedPct / 100);
+  const gap = Math.max(0, Math.round(aboveVotes - currentVotes));
+  return gap;
 }
 
 function renderFullTable(d) {

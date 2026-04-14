@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Proyecciones Electorales Peru 2026 | Resultados en Tiempo Real</title>
-  <meta name="description" content="Proyecciones estadisticas en tiempo real de las elecciones presidenciales Peru 2026. Datos de ONPE con analisis estratificado por departamento.">
+  <title>Proyecciones Electorales Per&uacute; 2026 | Resultados en Tiempo Real</title>
+  <meta name="description" content="Proyecciones estad&iacute;sticas en tiempo real de las elecciones presidenciales Per&uacute; 2026. Modelo Bayesiano con datos de ONPE.">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +28,7 @@
       <div class="header-right">
         <div class="update-time">
           <span class="update-label">Actualizado:</span>
-          <span id="update-time">—</span>
+          <span id="update-time">&mdash;</span>
         </div>
       </div>
     </div>
@@ -44,7 +44,7 @@
           <div class="progress-shimmer"></div>
         </div>
       </div>
-      <div class="progress-pct" id="progress-label">—</div>
+      <div class="progress-pct" id="progress-label">&mdash;</div>
     </div>
   </header>
 
@@ -57,7 +57,7 @@
 
     <!-- ===== TOP CANDIDATES ===== -->
     <section class="section">
-      <h2 class="section-title">Candidatos Principales — Proyeccion</h2>
+      <h2 class="section-title">Candidatos Principales &mdash; Proyecci&oacute;n</h2>
       <div class="candidates-scroll" id="top-candidates">
         <div class="loading-placeholder">Cargando datos de ONPE...</div>
       </div>
@@ -76,7 +76,7 @@
         </section>
 
         <section class="section">
-          <h2 class="section-title">Evolucion de Proyecciones</h2>
+          <h2 class="section-title">Evoluci&oacute;n de Proyecciones</h2>
           <div class="chart-container chart-timeline">
             <canvas id="timeline-chart"></canvas>
           </div>
@@ -100,7 +100,7 @@
                 <tr>
                   <th>Departamento</th>
                   <th>Avance</th>
-                  <th>Lider</th>
+                  <th>L&iacute;der</th>
                 </tr>
               </thead>
               <tbody id="dept-tbody">
@@ -114,7 +114,7 @@
 
     <!-- ===== DIAGNOSTICS ===== -->
     <section class="section diagnostics-section">
-      <h2 class="section-title">Diagnosticos del Modelo</h2>
+      <h2 class="section-title">Diagn&oacute;sticos del Modelo</h2>
       <div id="diagnostics" class="diagnostics-grid">
         <div class="diag-item diag-neutral">Inicializando motor de proyecciones...</div>
       </div>
@@ -122,7 +122,7 @@
 
     <!-- ===== FULL TABLE ===== -->
     <section class="section">
-      <h2 class="section-title">Resultados Completos — 36 Candidatos</h2>
+      <h2 class="section-title">Resultados Completos &mdash; 36 Candidatos</h2>
       <div class="table-container">
         <table class="results-table">
           <thead>
@@ -149,23 +149,23 @@
   <footer class="footer">
     <div class="footer-content">
       <div class="footer-methodology">
-        <h3>Metodologia</h3>
-        <p>Modelo <strong>Bayesiano Beta-Binomial</strong> con estratificacion distrital (~1,800 distritos).
-        Priors jerarquicos: distrito → provincia → departamento. Pesos poblacionales del censo distrital
-        (total de mesas por distrito). Correccion de voto remanente por diferencial urbano/rural.
-        Intervalos de credibilidad al 95% del posterior Beta parametrico.
-        <span id="sample-info">—</span>.</p>
+        <h3>Metodolog&iacute;a</h3>
+        <p>Modelo <strong>Bayesiano Beta-Binomial</strong> con estratificaci&oacute;n distrital (~1,800 distritos).
+        Priors jer&aacute;rquicos: distrito &rarr; provincia &rarr; departamento. Pesos poblacionales del censo distrital
+        (total de mesas por distrito). Correcci&oacute;n de voto remanente por diferencial urbano/rural.
+        Intervalos de credibilidad al 95% del posterior Beta param&eacute;trico.
+        <span id="sample-info">&mdash;</span>.</p>
       </div>
       <div class="footer-confidence">
         <h3>Nivel de Confianza</h3>
         <div class="grade-display-footer">
           <div class="grade-badge" id="grade-badge">?</div>
           <div class="grade-info-footer">
-            <span id="grade-label">—</span>
+            <span id="grade-label">&mdash;</span>
             <div class="grade-scale">
-              <span class="grade-item"><strong>A</strong> >80% contado, IC &lt;1pp</span>
-              <span class="grade-item"><strong>B</strong> >60% contado, IC &lt;2pp</span>
-              <span class="grade-item"><strong>C</strong> >40% contado, IC &lt;3pp</span>
+              <span class="grade-item"><strong>A</strong> &gt;80% contado, IC &lt;1pp</span>
+              <span class="grade-item"><strong>B</strong> &gt;60% contado, IC &lt;2pp</span>
+              <span class="grade-item"><strong>C</strong> &gt;40% contado, IC &lt;3pp</span>
               <span class="grade-item"><strong>D</strong> Datos preliminares</span>
             </div>
           </div>
@@ -173,9 +173,9 @@
       </div>
       <div class="footer-disclaimer">
         <h3>Aviso Legal</h3>
-        <p>Estas son <strong>proyecciones estadisticas</strong>, no resultados oficiales. Los resultados oficiales
-        son publicados exclusivamente por la ONPE. Las proyecciones estan sujetas a incertidumbre y pueden
-        cambiar a medida que se contabilizan mas actas.</p>
+        <p>Estas son <strong>proyecciones estad&iacute;sticas</strong>, no resultados oficiales. Los resultados oficiales
+        son publicados exclusivamente por la ONPE. Las proyecciones est&aacute;n sujetas a incertidumbre y pueden
+        cambiar a medida que se contabilizan m&aacute;s actas.</p>
       </div>
       <div class="footer-source">
         <p>Datos: <a href="https://resultadoelectoral.onpe.gob.pe" target="_blank" rel="noopener">ONPE - Resultados Electorales</a></p>
