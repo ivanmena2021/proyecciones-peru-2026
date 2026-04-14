@@ -205,15 +205,63 @@ function colorDepartments(departments, candidates) {
   }
 }
 
+/**
+ * Compute visual centroid using the polygon area-weighted formula.
+ * This places the label inside the polygon even for irregular shapes
+ * like Loreto or Lima, unlike a simple coordinate average.
+ */
 function computeCentroid(geometry, px, py) {
-  let sumX = 0, sumY = 0, count = 0;
-  forEachCoord(geometry, (lon, lat) => {
-    sumX += px(lon);
-    sumY += py(lat);
-    count++;
-  });
-  if (count === 0) return null;
-  return { x: sumX / count, y: sumY / count };
+  // Get the largest ring (for MultiPolygon, use the biggest polygon)
+  let bestRing = null;
+  let bestArea = 0;
+
+  if (geometry.type === 'Polygon') {
+    bestRing = geometry.coordinates[0];
+  } else if (geometry.type === 'MultiPolygon') {
+    for (const polygon of geometry.coordinates) {
+      const ring = polygon[0];
+      const area = Math.abs(ringArea(ring));
+      if (area > bestArea) { bestArea = area; bestRing = ring; }
+    }
+  }
+
+  if (!bestRing || bestRing.length < 3) {
+    // Fallback: simple average
+    let sumX = 0, sumY = 0, count = 0;
+    forEachCoord(geometry, (lon, lat) => { sumX += px(lon); sumY += py(lat); count++; });
+    return count > 0 ? { x: sumX / count, y: sumY / count } : null;
+  }
+
+  // Signed area centroid formula
+  let cx = 0, cy = 0, signedArea = 0;
+  for (let i = 0; i < bestRing.length - 1; i++) {
+    const x0 = px(bestRing[i][0]), y0 = py(bestRing[i][1]);
+    const x1 = px(bestRing[i + 1][0]), y1 = py(bestRing[i + 1][1]);
+    const a = x0 * y1 - x1 * y0;
+    signedArea += a;
+    cx += (x0 + x1) * a;
+    cy += (y0 + y1) * a;
+  }
+
+  signedArea *= 0.5;
+  if (Math.abs(signedArea) < 0.001) {
+    // Degenerate polygon, use simple average
+    let sumX = 0, sumY = 0, count = 0;
+    for (const [lon, lat] of bestRing) { sumX += px(lon); sumY += py(lat); count++; }
+    return { x: sumX / count, y: sumY / count };
+  }
+
+  cx /= (6 * signedArea);
+  cy /= (6 * signedArea);
+  return { x: cx, y: cy };
+}
+
+function ringArea(ring) {
+  let area = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    area += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+  }
+  return area * 0.5;
 }
 
 function getDeptShortName(name) {
