@@ -449,12 +449,28 @@ class BayesianEstimator {
    */
   _computeNationalCredibleIntervals(distPosteriors, provPriors, deptPriors, nationalPrior,
                                      partyCodes, census, resultsByDept, deptHeatmap) {
-    const B = 500; // fewer iterations needed with parametric bootstrap
+    const B = 200; // parametric bootstrap converges fast
     const samples = new Map();
     for (const pc of partyCodes) samples.set(pc, []);
 
-    // For each bootstrap replicate: draw from each district's Beta posterior
     const weights = this._computeDeptWeights(resultsByDept, deptHeatmap);
+
+    // --- PRECOMPUTE: group districts by dept, count mesas per district ---
+    // This eliminates the O(mesas) filter inside the hot loop.
+    const distsByDept = new Map();   // deptCode -> [distCode, ...]
+    const mesaCountByDist = new Map(); // distCode -> count
+
+    for (const [deptCode, data] of resultsByDept) {
+      for (const m of data.mesas) {
+        const dc = String(m.ubigeo || '').padStart(6, '0');
+        mesaCountByDist.set(dc, (mesaCountByDist.get(dc) || 0) + 1);
+      }
+    }
+    for (const distCode of distPosteriors.keys()) {
+      const deptCode = distCode.substring(0, 2);
+      if (!distsByDept.has(deptCode)) distsByDept.set(deptCode, []);
+      distsByDept.get(deptCode).push(distCode);
+    }
 
     for (let b = 0; b < B; b++) {
       const draw = new Map();
@@ -465,16 +481,17 @@ class BayesianEstimator {
         const w = weights.get(deptCode) || 0;
         if (w === 0) continue;
 
-        // Draw from each district's posterior
+        const distList = distsByDept.get(deptCode) || [];
+        if (distList.length === 0) continue;
+
         for (const pc of partyCodes) {
           let distTotal = 0, distN = 0;
-          for (const [distCode, post] of distPosteriors) {
-            if (distCode.substring(0, 2) !== deptCode) continue;
-            const p = post.get(pc);
+          for (const distCode of distList) {
+            const post = distPosteriors.get(distCode);
+            const p = post && post.get(pc);
             if (!p) continue;
-            // Draw from Beta(alpha, beta) using gamma trick
             const sample = this._betaRandom(p.alpha, p.beta);
-            const n = data.mesas.filter(m => String(m.ubigeo || '').padStart(6, '0') === distCode).length || 1;
+            const n = mesaCountByDist.get(distCode) || 1;
             distTotal += sample * n;
             distN += n;
           }
