@@ -160,13 +160,33 @@ function renderGrade(d) {
   const badge = document.getElementById('grade-badge');
   const label = document.getElementById('grade-label');
   const note = document.getElementById('projection-note');
+  const detail = document.getElementById('projection-detail');
 
   if (badge) {
     badge.textContent = d.grade || '?';
     badge.style.backgroundColor = getGradeColor(d.grade);
   }
   if (label) label.textContent = getGradeLabel(d.grade);
-  if (note) note.textContent = d.projectionNote || '';
+
+  // Simplified user-friendly message
+  if (note) {
+    const n = d.sampleSize || 0;
+    const pct = d.pctCounted || 0;
+    if (n === 0) {
+      note.textContent = 'Conectando con ONPE... Espera un momento.';
+    } else if (n < 300) {
+      note.textContent = `Incrementando muestra para ajustar la proyecci\u00f3n... (${n.toLocaleString('es-PE')} mesas analizadas de ${d.districtsCovered || 0} distritos)`;
+    } else {
+      note.textContent = `Proyecci\u00f3n basada en ${n.toLocaleString('es-PE')} mesas de ${d.districtsCovered || 0} distritos. La muestra se actualiza cada 45 segundos.`;
+    }
+  }
+
+  // Technical detail goes to footer
+  if (detail && d.projectionNote) {
+    // Move the full technical description to a hidden detail element
+    const sampleInfo = document.getElementById('sample-info');
+    if (sampleInfo) sampleInfo.textContent = d.projectionNote;
+  }
 }
 
 function renderTopCandidates(d) {

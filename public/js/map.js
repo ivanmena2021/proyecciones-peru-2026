@@ -81,9 +81,9 @@ function renderGeoJSON(container, geojson) {
   svg.style.maxHeight = '400px';
 
   for (const feature of geojson.features) {
-    const name = (feature.properties.NOMBDEP || feature.properties.name || '').toUpperCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove accents for matching
-    const code = DEPT_NAME_TO_CODE[name] || findCodeByName(name);
+    const name = feature.properties.NOMBDEP || feature.properties.name || '';
+    // Use FIRST_IDDP directly — it's the 2-digit department code from the GeoJSON
+    const code = feature.properties.FIRST_IDDP || DEPT_NAME_TO_CODE[name.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')] || '00';
 
     const paths = geometryToSVGPaths(feature.geometry, projectX, projectY);
 
@@ -103,6 +103,29 @@ function renderGeoJSON(container, geojson) {
       path.addEventListener('mouseleave', hideTooltip);
 
       svg.appendChild(path);
+    }
+  }
+
+  // Add department labels
+  for (const feature of geojson.features) {
+    const name = feature.properties.NOMBDEP || '';
+    const code = feature.properties.FIRST_IDDP || '00';
+    // Compute centroid for label placement
+    const centroid = computeCentroid(feature.geometry, projectX, projectY);
+    if (centroid && code !== '07') { // Skip Callao (too small)
+      const shortName = getDeptShortName(name);
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', centroid.x.toFixed(1));
+      text.setAttribute('y', centroid.y.toFixed(1));
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('font-size', name.length > 10 ? '5' : '6');
+      text.setAttribute('font-weight', '600');
+      text.setAttribute('fill', '#e8e8f0');
+      text.setAttribute('pointer-events', 'none');
+      text.setAttribute('opacity', '0.8');
+      text.textContent = shortName;
+      svg.appendChild(text);
     }
   }
 
@@ -180,6 +203,29 @@ function colorDepartments(departments, candidates) {
       path.setAttribute('opacity', Math.max(0.35, opacity).toFixed(2));
     }
   }
+}
+
+function computeCentroid(geometry, px, py) {
+  let sumX = 0, sumY = 0, count = 0;
+  forEachCoord(geometry, (lon, lat) => {
+    sumX += px(lon);
+    sumY += py(lat);
+    count++;
+  });
+  if (count === 0) return null;
+  return { x: sumX / count, y: sumY / count };
+}
+
+function getDeptShortName(name) {
+  const shorts = {
+    'AMAZONAS': 'AMA', 'ANCASH': 'ANC', 'APURIMAC': 'APU', 'AREQUIPA': 'AQP',
+    'AYACUCHO': 'AYA', 'CAJAMARCA': 'CAJ', 'CALLAO': 'CAL', 'CUSCO': 'CUS',
+    'HUANCAVELICA': 'HVC', 'HUANUCO': 'HCO', 'ICA': 'ICA', 'JUNIN': 'JUN',
+    'LA LIBERTAD': 'LAL', 'LAMBAYEQUE': 'LAM', 'LIMA': 'LIM', 'LORETO': 'LOR',
+    'MADRE DE DIOS': 'MDD', 'MOQUEGUA': 'MOQ', 'PASCO': 'PAS', 'PIURA': 'PIU',
+    'PUNO': 'PUN', 'SAN MARTIN': 'SMA', 'TACNA': 'TAC', 'TUMBES': 'TUM', 'UCAYALI': 'UCA'
+  };
+  return shorts[name.toUpperCase()] || name.substring(0, 3).toUpperCase();
 }
 
 function showTooltip(event, deptCode, deptName) {
