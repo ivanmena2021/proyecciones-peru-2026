@@ -123,6 +123,7 @@ function render() {
 
   renderProgressBar(d);
   renderGrade(d);
+  renderSwap(d);
   renderBattleForSecond(d);
   renderTopCandidates(d);
   renderFullTable(d);
@@ -188,6 +189,137 @@ function renderGrade(d) {
     const sampleInfo = document.getElementById('sample-info');
     if (sampleInfo) sampleInfo.textContent = d.projectionNote;
   }
+}
+
+/**
+ * "Se voltea la tortilla": detecta candidatos cuyo rank ACTUAL (por votos
+ * contabilizados en ONPE) difiere de su rank PROYECTADO (modal del posterior
+ * bayesiano). Destaca el vuelco más dramático involucrando al 2° lugar.
+ */
+function renderSwap(d) {
+  const section = document.getElementById('swap-section');
+  const body = document.getElementById('swap-body');
+  const subtitle = document.getElementById('swap-subtitle');
+  if (!section || !body || !d.candidates) return;
+
+  const cands = d.candidates.filter(c => c.rankProbs && c.rankProbs.length >= 3);
+  if (cands.length < 3) { section.style.display = 'none'; return; }
+
+  // Rank actual por votos contabilizados (pct ONPE)
+  const byActual = [...cands].sort((a, b) => (b.pct || 0) - (a.pct || 0));
+  const currentRank = new Map();
+  byActual.forEach((c, i) => currentRank.set(c.code, i + 1));
+
+  // Rank proyectado = argmax de rankProbs (posición más probable)
+  const projRank = new Map();
+  const projConfidence = new Map();
+  for (const c of cands) {
+    let maxP = -1, maxR = 99;
+    for (let r = 0; r < 6; r++) {
+      const p = c.rankProbs[r] || 0;
+      if (p > maxP) { maxP = p; maxR = r + 1; }
+    }
+    projRank.set(c.code, maxR);
+    projConfidence.set(c.code, maxP);
+  }
+
+  // Candidato que SUBE al 2° (actualmente NO es 2°, proyección dice 2°)
+  const riser = cands.find(c =>
+    projRank.get(c.code) === 2 && currentRank.get(c.code) > 2
+  );
+  // Candidato que CAE del 2° (actualmente 2°, proyección dice >2°)
+  const faller = cands.find(c =>
+    currentRank.get(c.code) === 2 && projRank.get(c.code) > 2
+  );
+
+  if (!riser || !faller) {
+    section.style.display = 'none';
+    return;
+  }
+
+  const riserP = (projConfidence.get(riser.code) || 0) * 100;
+  const fallerProjR = projRank.get(faller.code);
+  const fallerP = (faller.rankProbs[fallerProjR - 1] || 0) * 100;
+
+  // Diferencia de votos proyectada entre ambos
+  const totalValidEstimate = (d.totals && d.pctCounted > 5)
+    ? d.totals.totalVotesValid / (d.pctCounted / 100)
+    : 0;
+  const gapVotes = totalValidEstimate
+    ? Math.round(totalValidEstimate * Math.abs(riser.projectedPct - faller.projectedPct) / 100)
+    : null;
+
+  section.style.display = '';
+  subtitle.textContent = `${riser.partyShort} supera a ${faller.partyShort} por el pase a segunda vuelta`;
+
+  body.innerHTML = `
+    <div class="swap-compare">
+      <!-- Header con posiciones -->
+      <div class="swap-col-header swap-header-actual">
+        <span class="swap-col-label">AHORA (ONPE live)</span>
+      </div>
+      <div class="swap-arrow-wrap"></div>
+      <div class="swap-col-header swap-header-projected">
+        <span class="swap-col-label">PROYECCI&Oacute;N FINAL</span>
+      </div>
+
+      <!-- Fila del que SUBE: puesto actual inferior → 2° -->
+      <div class="swap-pos-card swap-pos-from" style="--accent: ${riser.color}">
+        <div class="swap-rank">#${currentRank.get(riser.code)}</div>
+        <div class="swap-party-badge" style="background: ${riser.color}">${riser.partyShort}</div>
+        <div class="swap-cand-name">${shortName(riser.name)}</div>
+        <div class="swap-pct">${formatPct(riser.pct, 2)}</div>
+      </div>
+      <div class="swap-arrow-wrap swap-arrow-up">
+        <div class="swap-arrow-line"></div>
+        <div class="swap-arrow-icon">&#8593;</div>
+        <div class="swap-arrow-label">SUBE</div>
+      </div>
+      <div class="swap-pos-card swap-pos-to swap-pos-winner" style="--accent: ${riser.color}">
+        <div class="swap-rank swap-rank-gold">#2</div>
+        <div class="swap-party-badge" style="background: ${riser.color}">${riser.partyShort}</div>
+        <div class="swap-cand-name">${shortName(riser.name)}</div>
+        <div class="swap-pct">${formatPct(riser.projectedPct, 2)}</div>
+        <div class="swap-prob-tag swap-prob-win">${riserP.toFixed(0)}% prob.</div>
+      </div>
+
+      <!-- Fila del que CAE: actualmente 2° → puesto inferior -->
+      <div class="swap-pos-card swap-pos-from swap-pos-losing" style="--accent: ${faller.color}">
+        <div class="swap-rank">#2</div>
+        <div class="swap-party-badge" style="background: ${faller.color}">${faller.partyShort}</div>
+        <div class="swap-cand-name">${shortName(faller.name)}</div>
+        <div class="swap-pct">${formatPct(faller.pct, 2)}</div>
+      </div>
+      <div class="swap-arrow-wrap swap-arrow-down">
+        <div class="swap-arrow-line"></div>
+        <div class="swap-arrow-icon">&#8595;</div>
+        <div class="swap-arrow-label">CAE</div>
+      </div>
+      <div class="swap-pos-card swap-pos-to" style="--accent: ${faller.color}">
+        <div class="swap-rank">#${fallerProjR}</div>
+        <div class="swap-party-badge" style="background: ${faller.color}">${faller.partyShort}</div>
+        <div class="swap-cand-name">${shortName(faller.name)}</div>
+        <div class="swap-pct">${formatPct(faller.projectedPct, 2)}</div>
+        <div class="swap-prob-tag swap-prob-lose">${fallerP.toFixed(0)}% prob.</div>
+      </div>
+    </div>
+
+    <div class="swap-summary">
+      <div class="swap-summary-item">
+        <span class="swap-summary-label">Brecha proyectada</span>
+        <span class="swap-summary-value">${formatPct(Math.abs(riser.projectedPct - faller.projectedPct), 2)}</span>
+      </div>
+      ${gapVotes !== null ? `
+      <div class="swap-summary-item">
+        <span class="swap-summary-label">Ventaja en votos</span>
+        <span class="swap-summary-value">~ ${formatNumber(gapVotes)}</span>
+      </div>` : ''}
+      <div class="swap-summary-item">
+        <span class="swap-summary-label">Actas contabilizadas</span>
+        <span class="swap-summary-value">${formatPct(d.pctCounted, 1)}</span>
+      </div>
+    </div>
+  `;
 }
 
 /**

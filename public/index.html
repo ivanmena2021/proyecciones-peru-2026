@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Proyecciones Electorales Per&uacute; 2026 | Resultados en Tiempo Real</title>
   <meta name="description" content="Proyecciones estad&iacute;sticas en tiempo real de las elecciones presidenciales Per&uacute; 2026. Modelo Bayesiano con datos de ONPE.">
-  <link rel="stylesheet" href="/css/styles.css?v=6">
+  <link rel="stylesheet" href="/css/styles.css?v=7">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -56,7 +56,22 @@
       <span class="model-detail" id="projection-detail"></span>
     </div>
 
-    <!-- ===== BATTLE FOR 2ND (aparece solo si hay pelea cerrada) ===== -->
+    <!-- ===== VUELCO / TORTILLA VOLTEÁNDOSE (solo si detecta swap entre ranks) ===== -->
+    <section class="section swap-section" id="swap-section" style="display:none;">
+      <div class="swap-header">
+        <span class="swap-icon">&#128260;</span>
+        <h2 class="swap-title">Se voltea la tortilla</h2>
+        <span class="swap-subtitle" id="swap-subtitle">&mdash;</span>
+      </div>
+      <div class="swap-body" id="swap-body"></div>
+      <div class="swap-footnote">
+        Comparaci&oacute;n entre posici&oacute;n <strong>actual</strong> (por actas ya contabilizadas en ONPE)
+        y posici&oacute;n <strong>final proyectada</strong> (m&aacute;s probable seg&uacute;n 200 simulaciones bootstrap
+        del posterior bayesiano). La probabilidad indica la certeza estad&iacute;stica del vuelco.
+      </div>
+    </section>
+
+    <!-- ===== BATTLE FOR 2ND/3RD (pelea detallada por probabilidades) ===== -->
     <section class="section battle-section" id="battle-section" style="display:none;">
       <div class="battle-header">
         <span class="battle-icon">&#128293;</span>
@@ -66,8 +81,7 @@
       <div class="battle-contenders" id="battle-contenders"></div>
       <div class="battle-footnote">
         Probabilidades bayesianas calculadas con <strong>200 simulaciones bootstrap</strong>
-        sobre el posterior Beta de cada distrito. Un candidato est&aacute; "en la pelea" si su probabilidad
-        de terminar 2&deg; es &ge;10%.
+        sobre el posterior Beta de cada distrito.
       </div>
     </section>
 
@@ -194,10 +208,10 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="/js/utils.js?v=6"></script>
+  <script src="/js/utils.js?v=7"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-  <script src="/js/app.js?v=6"></script>
-  <script src="/js/charts.js?v=6"></script>
+  <script src="/js/app.js?v=7"></script>
+  <script src="/js/charts.js?v=7"></script>
   <!-- map removed -->
 
 </body>
