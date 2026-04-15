@@ -1,10 +1,18 @@
 const express = require('express');
 const path = require('path');
 const CONFIG = require('./src/config');
-const Poller = require('./src/poller');
+
+// MODE=scrape uses the lightweight scraper-based poller (TV Peru / RPP SSR)
+// while ONPE's JSON API is disabled. Default is 'scrape'.
+// Set POLLER_MODE=full to re-enable the original Bayesian engine with mesa-level sampling.
+const MODE = process.env.POLLER_MODE || 'scrape';
+const Poller = MODE === 'full'
+  ? require('./src/poller')
+  : require('./src/poller-scrape');
 
 const app = express();
 const poller = new Poller();
+console.log(`[server] Poller mode: ${MODE}`);
 
 // --- Static files ---
 app.use(express.static(path.join(__dirname, 'public'), {

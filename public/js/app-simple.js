@@ -50,6 +50,7 @@ function render() {
   const d = state.data;
   if (!d) return;
   renderStale(d);
+  renderSourceNote(d);
   renderProgress(d);
   renderPodium(d);
   renderGaps(d);
@@ -72,12 +73,28 @@ function renderStale(d) {
   b.style.display = 'flex';
 }
 
+function renderSourceNote(d) {
+  const el = document.getElementById('source-note');
+  if (!el) return;
+  if (d.projectionMode === 'scraped_aggregate' && d.source) {
+    const label = d.source === 'tvperu' ? 'TV Per&uacute; (estatal)' : d.source.toUpperCase();
+    el.innerHTML = `<span class="src-dot"></span> Porcentajes oficiales ONPE, obtenidos v&iacute;a <strong>${label}</strong> mientras la API JSON p&uacute;blica de ONPE est&aacute; deshabilitada.`;
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
 function renderProgress(d) {
   const pct = d.pctCounted || 0;
   document.getElementById('progress-fill').style.width = pct + '%';
-  document.getElementById('progress-pct').textContent = fmtPct(pct, 2);
+  document.getElementById('progress-pct').textContent = fmtPct(pct, 3);
   const detail = document.getElementById('progress-detail');
-  if (d.totals) detail.textContent = `${fmtNum(d.totals.actasCounted)} / ${fmtNum(d.totals.actasTotal)} actas`;
+  if (d.totals && d.totals.actasCounted) {
+    detail.textContent = `${fmtNum(d.totals.actasCounted)} / ${fmtNum(d.totals.actasTotal)} actas`;
+  } else if (d.source) {
+    detail.textContent = 'Fuente: ' + String(d.source).toUpperCase();
+  }
   document.getElementById('update-time').textContent = fmtTime(d.timestamp);
 }
 
@@ -127,13 +144,20 @@ function setGap(id, a, b, totalValid) {
   if (!el || !a || !b) return;
   const votesA = a.votes || 0, votesB = b.votes || 0;
   const gapVotes = Math.abs(votesA - votesB);
-  // Gap in projected pct (more stable indicator of final result)
   const gapPct = Math.abs((a.projectedPct || 0) - (b.projectedPct || 0));
 
-  el.querySelector('.gap-votes').textContent = fmtNum(gapVotes) + ' votos';
-  el.querySelector('.gap-pct').textContent = fmtPct(gapPct, 2) + ' (proyectado)';
+  // If raw vote counts aren't available (scraper mode), estimate from pct.
+  const votesEl = el.querySelector('.gap-votes');
+  if (gapVotes > 0) {
+    votesEl.textContent = fmtNum(gapVotes) + ' votos';
+  } else if (totalValid && gapPct > 0) {
+    votesEl.textContent = '~' + fmtNum((gapPct / 100) * totalValid) + ' votos';
+  } else {
+    votesEl.textContent = fmtPct(gapPct, 3);
+  }
+  el.querySelector('.gap-pct').textContent = fmtPct(gapPct, 3) + ' de diferencia';
   el.querySelector('.gap-names').textContent =
-    `${a.partyShort || a.code} ${fmtPct(a.projectedPct, 2)}  vs  ${b.partyShort || b.code} ${fmtPct(b.projectedPct, 2)}`;
+    `${a.partyShort || a.code} ${fmtPct(a.pct, 3)}  vs  ${b.partyShort || b.code} ${fmtPct(b.pct, 3)}`;
 }
 
 function renderChart() {
