@@ -472,6 +472,10 @@ class BayesianEstimator {
       distsByDept.get(deptCode).push(distCode);
     }
 
+    // Track rank counts per party across bootstrap replicates: [p1,p2,p3,p4,p5,p6]
+    const rankCounts = new Map();
+    for (const pc of partyCodes) rankCounts.set(pc, [0, 0, 0, 0, 0, 0]);
+
     for (let b = 0; b < B; b++) {
       const draw = new Map();
       for (const pc of partyCodes) draw.set(pc, 0);
@@ -502,9 +506,16 @@ class BayesianEstimator {
       }
 
       for (const pc of partyCodes) samples.get(pc).push(draw.get(pc));
+
+      // Record rank of each party in this replicate (top 6 only)
+      const sorted = [...draw.entries()].sort((a, b) => b[1] - a[1]);
+      for (let i = 0; i < Math.min(sorted.length, 6); i++) {
+        const pc = sorted[i][0];
+        rankCounts.get(pc)[i]++;
+      }
     }
 
-    // Compute percentiles
+    // Compute percentiles + rank probabilities
     const result = new Map();
     for (const [pc, s] of samples) {
       s.sort((a, b) => a - b);
@@ -512,7 +523,9 @@ class BayesianEstimator {
       const hi = s[Math.ceil(B * 0.975) - 1] || 0;
       const mean = s.reduce((a, b) => a + b, 0) / B;
       const se = Math.sqrt(s.reduce((acc, v) => acc + (v - mean) ** 2, 0) / (B - 1));
-      result.set(pc, { lo, hi, mean, se });
+      const counts = rankCounts.get(pc) || [0, 0, 0, 0, 0, 0];
+      const rankProbs = counts.map(c => c / B); // [P(1st), P(2nd), ..., P(6th)]
+      result.set(pc, { lo, hi, mean, se, rankProbs });
     }
     return result;
   }
@@ -629,6 +642,7 @@ class BayesianEstimator {
       const pp = totP > 0 ? (p / totP) * 100 : 0;
       const lo = totP > 0 ? (b.lo / totP) * 100 : 0;
       const hi = totP > 0 ? (b.hi / totP) * 100 : 0;
+      const rp = b.rankProbs || [0, 0, 0, 0, 0, 0];
       cs.push({
         code: pc, party: o?.nombreAgrupacionPolitica || cfg.name || `Partido ${pc}`,
         partyShort: cfg.short || pc, name: o?.nombreCandidato || '',
@@ -636,6 +650,7 @@ class BayesianEstimator {
         projectedPct: Math.round(pp * 100) / 100,
         marginLow: Math.round(lo * 100) / 100, marginHigh: Math.round(hi * 100) / 100,
         se: Math.round((b.se / Math.max(totP, 0.001)) * 10000) / 100,
+        rankProbs: rp.map(v => Math.round(v * 1000) / 1000), // [P(1°), P(2°), ...]
         color: cfg.color || CONFIG.DEFAULT_PARTY_COLOR
       });
     }

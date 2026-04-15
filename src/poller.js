@@ -193,15 +193,25 @@ class Poller {
         }
       }
 
-      // Augment sample (skip first cycle to get results fast)
+      // Augment sample — en recta final (>70% contado) la muestra ya es estable
+      // y el signal principal viene del live ONPE, así que augmentamos menos.
+      const pctCountedNow = totals ? (totals.contabilizadas / totals.totalActas) * 100 : 0;
+      const isLateStage = pctCountedNow >= CONFIG.LATE_STAGE_PCT;
+
       if (this.sampler.initialSampleDone && this.cycleCount > 1) {
-        try {
-          await Promise.race([
-            this.sampler.augmentSample(100),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('augment timeout')), 30000))
-          ]);
-        } catch (e) {
-          console.log(`[poller] Augment timeout/error: ${e.message}, continuing with existing sample`);
+        // En recta final, augmentar cada 4 ciclos (en vez de cada ciclo) y con timeout corto
+        const shouldAugment = !isLateStage || (this.cycleCount % 4 === 0);
+        if (shouldAugment) {
+          const augmentSize = isLateStage ? 40 : 100;
+          const timeout = isLateStage ? 10000 : 30000;
+          try {
+            await Promise.race([
+              this.sampler.augmentSample(augmentSize),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('augment timeout')), timeout))
+            ]);
+          } catch (e) {
+            console.log(`[poller] Augment timeout/error: ${e.message}, continuing`);
+          }
         }
       }
 

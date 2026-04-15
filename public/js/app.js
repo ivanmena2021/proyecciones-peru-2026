@@ -123,6 +123,7 @@ function render() {
 
   renderProgressBar(d);
   renderGrade(d);
+  renderBattleForSecond(d);
   renderTopCandidates(d);
   renderFullTable(d);
   renderDepartmentTable(d);
@@ -187,6 +188,100 @@ function renderGrade(d) {
     const sampleInfo = document.getElementById('sample-info');
     if (sampleInfo) sampleInfo.textContent = d.projectionNote;
   }
+}
+
+/**
+ * "Pelea por el 2do lugar": muestra candidatos con P(terminar 2°) >= 10%.
+ * Si el líder tiene P(1°) < 85% y hay pelea también por #1, incluye al líder también.
+ */
+function renderBattleForSecond(d) {
+  const section = document.getElementById('battle-section');
+  const container = document.getElementById('battle-contenders');
+  const subtitle = document.getElementById('battle-subtitle');
+  if (!section || !container || !d.candidates) return;
+
+  const cands = d.candidates.filter(c => c.rankProbs && c.rankProbs.length >= 2);
+  if (cands.length === 0) { section.style.display = 'none'; return; }
+
+  // Candidatos "en pelea por el 2°": P(2°) >= 10%
+  const THRESHOLD = 0.10;
+  const inBattle = cands.filter(c => (c.rankProbs[1] || 0) >= THRESHOLD);
+
+  if (inBattle.length < 2) {
+    section.style.display = 'none';
+    return;
+  }
+
+  // Ordenar por P(2°) descendente (quien tiene más chance de quedar 2° aparece primero)
+  inBattle.sort((a, b) => (b.rankProbs[1] || 0) - (a.rankProbs[1] || 0));
+
+  // Para calcular votos estimados entre ellos, usar totales ONPE proyectados
+  const totalValidEstimate = (d.totals && d.pctCounted > 5)
+    ? d.totals.totalVotesValid / (d.pctCounted / 100)
+    : null;
+
+  // Proyectado máximo entre los contendientes (para normalizar barras)
+  const maxProj = Math.max(...inBattle.map(c => c.projectedPct));
+
+  section.style.display = '';
+  subtitle.textContent = `${inBattle.length} candidatos se disputan el pase a segunda vuelta`;
+
+  container.innerHTML = inBattle.map(c => {
+    const p2 = (c.rankProbs[1] || 0) * 100;
+    const p1 = (c.rankProbs[0] || 0) * 100;
+    const p3plus = (100 - p1 - p2);
+    const barWidth = (c.projectedPct / maxProj) * 100;
+
+    const intensity = p2 >= 40 ? 'battle-card-hot' : p2 >= 25 ? 'battle-card-warm' : 'battle-card-cool';
+    const projectedVotes = totalValidEstimate
+      ? Math.round(totalValidEstimate * (c.projectedPct / 100))
+      : null;
+
+    return `
+    <div class="battle-card ${intensity}" style="--accent: ${c.color}">
+      <div class="battle-card-top">
+        <div class="battle-party-badge" style="background: ${c.color}">${c.partyShort}</div>
+        <div class="battle-candidate-info">
+          <div class="battle-candidate-name">${shortName(c.name)}</div>
+          <div class="battle-candidate-party">${c.party}</div>
+        </div>
+        <div class="battle-prob-big">
+          <div class="battle-prob-value">${p2.toFixed(0)}<span class="battle-prob-pct">%</span></div>
+          <div class="battle-prob-label">prob. 2&deg; lugar</div>
+        </div>
+      </div>
+
+      <div class="battle-bar-wrap">
+        <div class="battle-bar">
+          <div class="battle-bar-fill" style="width: ${barWidth.toFixed(1)}%; background: ${c.color}"></div>
+        </div>
+        <div class="battle-bar-labels">
+          <span class="battle-proj">${formatPct(c.projectedPct, 2)} proyectado</span>
+          <span class="battle-ci">IC 95%: ${formatPct(c.marginLow, 2)} &mdash; ${formatPct(c.marginHigh, 2)}</span>
+        </div>
+      </div>
+
+      <div class="battle-dist">
+        <div class="battle-dist-item">
+          <span class="battle-dist-label">P(1&deg;)</span>
+          <span class="battle-dist-value">${p1.toFixed(1)}%</span>
+        </div>
+        <div class="battle-dist-item battle-dist-highlight">
+          <span class="battle-dist-label">P(2&deg;)</span>
+          <span class="battle-dist-value">${p2.toFixed(1)}%</span>
+        </div>
+        <div class="battle-dist-item">
+          <span class="battle-dist-label">P(3&deg; o menos)</span>
+          <span class="battle-dist-value">${Math.max(0, p3plus).toFixed(1)}%</span>
+        </div>
+        ${projectedVotes !== null ? `
+        <div class="battle-dist-item">
+          <span class="battle-dist-label">Votos proyectados</span>
+          <span class="battle-dist-value">${formatNumber(projectedVotes)}</span>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderTopCandidates(d) {

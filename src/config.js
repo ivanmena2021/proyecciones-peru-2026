@@ -7,8 +7,9 @@ const CONFIG = {
   ONPE_BASE: 'https://resultadoelectoral.onpe.gob.pe/presentacion-backend',
   USER_AGENT: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
 
-  // Polling
-  POLL_INTERVAL_MS: 45_000,
+  // Polling (recta final: ciclos más cortos para actualización en vivo)
+  POLL_INTERVAL_MS: 20_000,
+  LATE_STAGE_PCT: 70, // a partir de este % contado, se reduce augmentación y se usa live ONPE más agresivo
   FRAME_REFRESH_INTERVAL_MS: 300_000, // full frame refresh every 5 min
 
   // Rate limiting
