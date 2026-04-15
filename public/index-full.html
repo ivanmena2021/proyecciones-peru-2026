@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proyecciones Electorales Per&uacute; 2026 | Resultados en Tiempo Real</title>
+  <meta name="description" content="Proyecciones estad&iacute;sticas en tiempo real de las elecciones presidenciales Per&uacute; 2026. Modelo Bayesiano con datos de ONPE.">
+  <link rel="stylesheet" href="/css/styles.css?v=9">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="site-title">
+          <span class="title-flag">&#127477;&#127466;</span>
+          Proyecciones Electorales 2026
+        </h1>
+        <div class="header-badges">
+          <span class="badge badge-onpe">Fuente: ONPE</span>
+          <span class="badge" id="connection-badge">Conectando...</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="update-time">
+          <span class="update-label">Actualizado:</span>
+          <span id="update-time">&mdash;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="progress-section">
+      <div class="progress-header">
+        <span class="progress-title">Actas contabilizadas</span>
+        <span class="progress-numbers" id="progress-detail">Cargando...</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill">
+          <div class="progress-shimmer"></div>
+        </div>
+      </div>
+      <div class="progress-pct" id="progress-label">&mdash;</div>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- ===== MODEL STATUS (compact) ===== -->
+    <div class="model-status" id="model-status">
+      <span class="model-note" id="projection-note">Cargando modelo...</span>
+      <span class="model-detail" id="projection-detail"></span>
+    </div>
+
+    <!-- ===== VUELCO / TORTILLA VOLTEÁNDOSE (solo si detecta swap entre ranks) ===== -->
+    <section class="section swap-section" id="swap-section" style="display:none;">
+      <div class="swap-header">
+        <span class="swap-icon">&#128260;</span>
+        <h2 class="swap-title">Vuelco en el Podio</h2>
+        <span class="swap-subtitle" id="swap-subtitle">&mdash;</span>
+      </div>
+      <div class="swap-body" id="swap-body"></div>
+      <div class="swap-footnote">
+        Comparaci&oacute;n entre posici&oacute;n <strong>actual</strong> (por actas ya contabilizadas en ONPE)
+        y posici&oacute;n <strong>final proyectada</strong> (m&aacute;s probable seg&uacute;n 200 simulaciones bootstrap
+        del posterior bayesiano). La probabilidad indica la certeza estad&iacute;stica del vuelco.
+      </div>
+    </section>
+
+    <!-- ===== BATTLE FOR 2ND/3RD (pelea detallada por probabilidades) ===== -->
+    <section class="section battle-section" id="battle-section" style="display:none;">
+      <div class="battle-header">
+        <span class="battle-icon">&#128293;</span>
+        <h2 class="battle-title">Pelea por el 2&deg; lugar</h2>
+        <span class="battle-subtitle" id="battle-subtitle">&mdash;</span>
+      </div>
+      <div class="battle-contenders" id="battle-contenders"></div>
+      <div class="battle-footnote">
+        Probabilidades bayesianas calculadas con <strong>200 simulaciones bootstrap</strong>
+        sobre el posterior Beta de cada distrito.
+      </div>
+    </section>
+
+    <!-- ===== TOP CANDIDATES ===== -->
+    <section class="section">
+      <h2 class="section-title">Candidatos Principales &mdash; Proyecci&oacute;n</h2>
+      <div class="candidates-scroll" id="top-candidates">
+        <div class="loading-placeholder">Cargando datos de ONPE...</div>
+      </div>
+    </section>
+
+    <!-- ===== TWO COLUMN LAYOUT ===== -->
+    <div class="two-columns">
+
+      <!-- LEFT: Charts -->
+      <div class="column-left">
+        <section class="section">
+          <h2 class="section-title">Actual vs Proyectado</h2>
+          <div class="chart-container">
+            <canvas id="bar-chart"></canvas>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2 class="section-title">Evoluci&oacute;n de Proyecciones</h2>
+          <div class="chart-container chart-timeline">
+            <canvas id="timeline-chart"></canvas>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT: Map + Department table -->
+      <div class="column-right">
+        <section class="section">
+          <h2 class="section-title">Avance por Departamento</h2>
+          <div class="dept-table-container">
+            <table class="dept-table">
+              <thead>
+                <tr>
+                  <th>Departamento</th>
+                  <th>Avance</th>
+                  <th>L&iacute;der</th>
+                </tr>
+              </thead>
+              <tbody id="dept-tbody">
+                <tr><td colspan="3" class="loading-placeholder">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ===== DIAGNOSTICS ===== -->
+    <section class="section diagnostics-section">
+      <h2 class="section-title">Diagn&oacute;sticos del Modelo</h2>
+      <div id="diagnostics" class="diagnostics-grid">
+        <div class="diag-item diag-neutral">Inicializando motor de proyecciones...</div>
+      </div>
+    </section>
+
+    <!-- ===== FULL TABLE ===== -->
+    <section class="section">
+      <h2 class="section-title">Resultados Completos &mdash; 36 Candidatos</h2>
+      <div class="table-container">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-party">Partido</th>
+              <th class="col-name">Candidato</th>
+              <th class="col-votes">Votos</th>
+              <th class="col-pct">% Actual</th>
+              <th class="col-projected">% Proyectado</th>
+              <th class="col-ci">IC 95%</th>
+            </tr>
+          </thead>
+          <tbody id="results-tbody">
+            <tr><td colspan="7" class="loading-placeholder">Cargando datos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="footer-methodology">
+        <h3>Metodolog&iacute;a</h3>
+        <p>Modelo <strong>Bayesiano Beta-Binomial</strong> con estratificaci&oacute;n distrital (~1,800 distritos).
+        Priors jer&aacute;rquicos: distrito &rarr; provincia &rarr; departamento. Pesos poblacionales del censo distrital
+        (total de mesas por distrito). Correcci&oacute;n de voto remanente por diferencial urbano/rural.
+        Intervalos de credibilidad al 95% del posterior Beta param&eacute;trico.
+        <span id="sample-info">&mdash;</span>.</p>
+      </div>
+      <div class="footer-confidence">
+        <h3>Nivel de Confianza</h3>
+        <div class="grade-display-footer">
+          <div class="grade-badge" id="grade-badge">?</div>
+          <div class="grade-info-footer">
+            <span id="grade-label">&mdash;</span>
+            <div class="grade-scale">
+              <span class="grade-item"><strong>A</strong> &gt;80% contado, IC &lt;1pp</span>
+              <span class="grade-item"><strong>B</strong> &gt;60% contado, IC &lt;2pp</span>
+              <span class="grade-item"><strong>C</strong> &gt;40% contado, IC &lt;3pp</span>
+              <span class="grade-item"><strong>D</strong> Datos preliminares</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer-disclaimer">
+        <h3>Aviso Legal</h3>
+        <p>Estas son <strong>proyecciones estad&iacute;sticas</strong>, no resultados oficiales. Los resultados oficiales
+        son publicados exclusivamente por la ONPE. Las proyecciones est&aacute;n sujetas a incertidumbre y pueden
+        cambiar a medida que se contabilizan m&aacute;s actas.</p>
+      </div>
+      <div class="footer-source">
+        <p>Datos: <a href="https://resultadoelectoral.onpe.gob.pe" target="_blank" rel="noopener">ONPE - Resultados Electorales</a></p>
+        <p style="margin-top: 0.5rem;">Licencia MIT &copy; 2026 Ivan Mena</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/js/utils.js?v=9"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script src="/js/app.js?v=9"></script>
+  <script src="/js/charts.js?v=9"></script>
+  <!-- map removed -->
+
+</body>
+</html>
