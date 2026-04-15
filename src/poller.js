@@ -33,6 +33,11 @@ class Poller {
     this.status = 'initializing';
     this.deptHeatmap = new Map();
     this._deptNames = new Map();
+
+    // Fallback cache: último dato bueno de ONPE cuando live feed falla
+    this.lastGoodCandidates = null;
+    this.lastGoodTotals = null;
+    this.lastGoodTimestamp = 0;
   }
 
   async start() {
@@ -168,10 +173,32 @@ class Poller {
     const startTime = Date.now();
 
     try {
-      const [candidates, totals, heatmap, participation] = await Promise.all([
+      let [candidates, totals, heatmap, participation] = await Promise.all([
         fetcher.fetchNationalCandidates(), fetcher.fetchNationalTotals(),
         fetcher.fetchDepartmentHeatmap(), fetcher.fetchParticipationHeatmap()
       ]);
+
+      // Fallback a último dato bueno si ONPE falla
+      const candidatesOk = Array.isArray(candidates) && candidates.length > 0
+        && candidates.some(c => (c.totalVotosValidos || 0) > 0);
+      const totalsOk = totals && (totals.contabilizadas > 0 || totals.totalActas > 0);
+
+      let onpeStale = false;
+      let onpeStaleSince = null;
+      if (candidatesOk && totalsOk) {
+        this.lastGoodCandidates = candidates;
+        this.lastGoodTotals = totals;
+        this.lastGoodTimestamp = Date.now();
+      } else if (this.lastGoodCandidates && this.lastGoodTotals) {
+        // Usar último dato bueno + marcar como stale
+        candidates = this.lastGoodCandidates;
+        totals = this.lastGoodTotals;
+        onpeStale = true;
+        onpeStaleSince = this.lastGoodTimestamp;
+        console.log(`[poller] ONPE live feed failing, using cached data from ${Math.round((Date.now() - this.lastGoodTimestamp)/1000)}s ago`);
+      }
+      this._onpeStale = onpeStale;
+      this._onpeStaleSince = onpeStaleSince;
 
       // Update heatmap
       if (heatmap) {
@@ -237,7 +264,10 @@ class Poller {
         ...estimate,
         diagnostics: { anomalies: diag.anomalies, backtest: diag.backtest, winnerCall: diag.winnerCall },
         projectionNote: this._getProjectionNote(estimate),
-        apiStats: fetcher.getStats()
+        apiStats: fetcher.getStats(),
+        onpeStale: this._onpeStale || false,
+        onpeStaleSince: this._onpeStaleSince,
+        onpeStaleSeconds: this._onpeStaleSince ? Math.round((Date.now() - this._onpeStaleSince) / 1000) : 0
       };
 
       cache.writeJSON('latest.json', output);

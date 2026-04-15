@@ -121,6 +121,7 @@ function render() {
   const d = state.data;
   if (!d) return;
 
+  renderStaleBanner(d);
   renderProgressBar(d);
   renderGrade(d);
   renderSwap(d);
@@ -141,6 +142,31 @@ function render() {
   if (typeof renderMap === 'function') {
     renderMap(d);
   }
+}
+
+function renderStaleBanner(d) {
+  let banner = document.getElementById('stale-banner');
+  if (!d.onpeStale) {
+    if (banner) banner.style.display = 'none';
+    return;
+  }
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'stale-banner';
+    banner.className = 'stale-banner';
+    const main = document.querySelector('main.main');
+    if (main) main.insertBefore(banner, main.firstChild);
+  }
+  const secs = d.onpeStaleSeconds || 0;
+  const mins = Math.floor(secs / 60);
+  const ago = mins >= 1 ? `${mins} min` : `${secs} s`;
+  banner.innerHTML = `
+    <span class="stale-icon">&#9888;</span>
+    <div class="stale-text">
+      <strong>Feed de ONPE interrumpido</strong>
+      <span>Mostrando &uacute;ltima data v&aacute;lida (hace ${ago}) + proyecci&oacute;n bayesiana activa sobre muestra cacheada.</span>
+    </div>`;
+  banner.style.display = 'flex';
 }
 
 function renderProgressBar(d) {

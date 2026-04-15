@@ -1458,3 +1458,36 @@ body {
     font-size: 1.6rem;
   }
 }
+
+/* ===== STALE ONPE FEED BANNER ===== */
+.stale-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 1rem 0;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(90deg, rgba(217, 16, 35, 0.15), rgba(240, 180, 41, 0.1));
+  border: 1px solid #d91023;
+  border-left: 4px solid #d91023;
+  border-radius: 8px;
+  color: #e8e8f0;
+  animation: stale-pulse 2s ease-in-out infinite;
+}
+.stale-banner .stale-icon {
+  font-size: 1.6rem;
+  color: #f0b429;
+}
+.stale-banner .stale-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+}
+.stale-banner .stale-text strong {
+  color: #ff6b7a;
+  font-size: 1rem;
+}
+@keyframes stale-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 16, 35, 0.3); }
+  50% { box-shadow: 0 0 12px 2px rgba(217, 16, 35, 0.25); }
+}
