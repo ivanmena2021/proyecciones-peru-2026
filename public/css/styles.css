@@ -1014,6 +1014,99 @@ body {
 .swap-arrow-up .swap-arrow-label    { color: #22c55e; }
 .swap-arrow-down .swap-arrow-label  { color: #ef4444; }
 
+/* Strip central: ventaja actual vs proyectada entre los dos "segundos" */
+.swap-gap-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0.6rem 1.4rem;
+  padding: 0.9rem 1.2rem;
+  background:
+    linear-gradient(90deg, rgba(239, 68, 68, 0.14) 0%, rgba(250, 204, 21, 0.1) 50%, rgba(34, 197, 94, 0.14) 100%);
+  border: 1px solid rgba(250, 204, 21, 0.25);
+  border-radius: 12px;
+  margin: 0.3rem 0;
+}
+
+.swap-gap-now, .swap-gap-proj {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.swap-gap-now { justify-content: flex-end; text-align: right; }
+.swap-gap-proj { justify-content: flex-start; text-align: left; }
+
+.swap-gap-pill {
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.78rem;
+  color: #fff;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.swap-gap-text {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.swap-gap-votes {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.swap-gap-votes-win {
+  color: #22c55e;
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
+}
+
+.swap-gap-unit {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.swap-gap-arrow {
+  font-size: 1.8rem;
+  color: #facc15;
+  font-weight: 900;
+  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.5));
+  animation: swapGapArrow 2s ease-in-out infinite;
+}
+
+@keyframes swapGapArrow {
+  0%, 100% { transform: scaleX(1); }
+  50%      { transform: scaleX(1.25); }
+}
+
+.swap-gap-swing {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #facc15;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgba(250, 204, 21, 0.25);
+  letter-spacing: 0.3px;
+}
+
+.swap-gap-swing strong {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
 .swap-summary {
   display: flex;
   gap: 1.5rem;
@@ -1057,6 +1150,19 @@ body {
 }
 
 @media (max-width: 720px) {
+  .swap-gap-strip {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+  .swap-gap-now, .swap-gap-proj {
+    justify-content: center;
+    text-align: center;
+  }
+  .swap-gap-arrow {
+    transform: rotate(90deg);
+    font-size: 1.4rem;
+  }
+
   .swap-compare {
     grid-template-columns: 1fr;
     gap: 0.5rem;

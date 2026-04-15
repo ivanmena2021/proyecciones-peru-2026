@@ -241,12 +241,21 @@ function renderSwap(d) {
   const fallerProjR = projRank.get(faller.code);
   const fallerP = (faller.rankProbs[fallerProjR - 1] || 0) * 100;
 
-  // Diferencia de votos proyectada entre ambos
+  // Ventaja ACTUAL: en votos ya contabilizados (ONPE), quién lidera entre los dos
+  const gapNow = Math.abs((faller.votes || 0) - (riser.votes || 0));
+  const gapNowLeader = (faller.votes || 0) > (riser.votes || 0) ? faller : riser;
+
+  // Ventaja PROYECTADA: diferencia de votos al final según proyección
   const totalValidEstimate = (d.totals && d.pctCounted > 5)
     ? d.totals.totalVotesValid / (d.pctCounted / 100)
     : 0;
   const gapVotes = totalValidEstimate
     ? Math.round(totalValidEstimate * Math.abs(riser.projectedPct - faller.projectedPct) / 100)
+    : null;
+
+  // El "vuelco" es la suma: desventaja que tiene que remontar + ventaja que termina teniendo
+  const totalSwing = gapVotes !== null && gapNowLeader.code === faller.code
+    ? gapNow + gapVotes
     : null;
 
   section.style.display = '';
@@ -281,6 +290,29 @@ function renderSwap(d) {
         <div class="swap-cand-name">${shortName(riser.name)}</div>
         <div class="swap-pct">${formatPct(riser.projectedPct, 2)}</div>
         <div class="swap-prob-tag swap-prob-win">${riserP.toFixed(0)}% prob.</div>
+      </div>
+
+      <!-- STRIP CENTRAL: ventaja actual en votos entre los dos "segundos" -->
+      <div class="swap-gap-strip">
+        <div class="swap-gap-now">
+          <span class="swap-gap-pill" style="background: ${gapNowLeader.color}">${gapNowLeader.partyShort}</span>
+          <span class="swap-gap-text">
+            lidera <strong>ahora mismo</strong> por
+          </span>
+          <span class="swap-gap-votes">${formatNumber(gapNow)}</span>
+          <span class="swap-gap-unit">votos</span>
+        </div>
+        <div class="swap-gap-arrow">&#8596;</div>
+        <div class="swap-gap-proj">
+          <span class="swap-gap-pill" style="background: ${riser.color}">${riser.partyShort}</span>
+          <span class="swap-gap-text">terminar&aacute; arriba por</span>
+          <span class="swap-gap-votes swap-gap-votes-win">${gapVotes !== null ? '~ ' + formatNumber(gapVotes) : '—'}</span>
+          <span class="swap-gap-unit">votos proyectados</span>
+        </div>
+        ${totalSwing !== null ? `
+        <div class="swap-gap-swing">
+          Vuelco total: <strong>${formatNumber(totalSwing)} votos</strong> de diferencia entre ahora y el final proyectado
+        </div>` : ''}
       </div>
 
       <!-- Fila del que CAE: actualmente 2° → puesto inferior -->
