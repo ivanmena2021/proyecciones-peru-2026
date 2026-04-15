@@ -191,29 +191,45 @@ function renderGrade(d) {
 }
 
 /**
- * "Pelea por el 2do lugar": muestra candidatos con P(terminar 2°) >= 10%.
- * Si el líder tiene P(1°) < 85% y hay pelea también por #1, incluye al líder también.
+ * "Pelea por el podio": muestra candidatos con probabilidad material
+ * de terminar en posiciones 2° o 3° (excluye al líder cuando está sellado).
+ * Detecta dinámicamente si la pelea es por el 2° o por el 3°.
  */
 function renderBattleForSecond(d) {
   const section = document.getElementById('battle-section');
   const container = document.getElementById('battle-contenders');
   const subtitle = document.getElementById('battle-subtitle');
+  const title = section?.querySelector('.battle-title');
   if (!section || !container || !d.candidates) return;
 
-  const cands = d.candidates.filter(c => c.rankProbs && c.rankProbs.length >= 2);
+  const cands = d.candidates.filter(c => c.rankProbs && c.rankProbs.length >= 3);
   if (cands.length === 0) { section.style.display = 'none'; return; }
 
-  // Candidatos "en pelea por el 2°": P(2°) >= 10%
-  const THRESHOLD = 0.10;
-  const inBattle = cands.filter(c => (c.rankProbs[1] || 0) >= THRESHOLD);
+  // Un candidato está "en el podio en disputa" si tiene prob combinada
+  // de quedar 2° o 3° ≥ 15%, o si P(2°) ≥ 5%
+  const inBattle = cands.filter(c => {
+    const p2 = c.rankProbs[1] || 0;
+    const p3 = c.rankProbs[2] || 0;
+    return (p2 + p3) >= 0.15 || p2 >= 0.05;
+  });
 
   if (inBattle.length < 2) {
     section.style.display = 'none';
     return;
   }
 
-  // Ordenar por P(2°) descendente (quien tiene más chance de quedar 2° aparece primero)
-  inBattle.sort((a, b) => (b.rankProbs[1] || 0) - (a.rankProbs[1] || 0));
+  // Ordenar por P(2°)+P(3°) desc, luego por projectedPct
+  inBattle.sort((a, b) => {
+    const pa = (a.rankProbs[1] || 0) + (a.rankProbs[2] || 0);
+    const pb = (b.rankProbs[1] || 0) + (b.rankProbs[2] || 0);
+    if (Math.abs(pa - pb) > 0.01) return pb - pa;
+    return b.projectedPct - a.projectedPct;
+  });
+
+  // Detectar naturaleza de la pelea
+  const topP2 = inBattle[0].rankProbs[1] || 0;
+  const is2ndLocked = topP2 >= 0.85;
+  title.textContent = is2ndLocked ? 'Pelea por el 3\u00b0 lugar' : 'Pelea por el 2\u00b0 lugar';
 
   // Para calcular votos estimados entre ellos, usar totales ONPE proyectados
   const totalValidEstimate = (d.totals && d.pctCounted > 5)
@@ -224,15 +240,21 @@ function renderBattleForSecond(d) {
   const maxProj = Math.max(...inBattle.map(c => c.projectedPct));
 
   section.style.display = '';
-  subtitle.textContent = `${inBattle.length} candidatos se disputan el pase a segunda vuelta`;
+  const focusRank = is2ndLocked ? 3 : 2; // qué puesto es el disputado
+  const focusKey = focusRank - 1; // índice en rankProbs (0-based)
+  subtitle.textContent = is2ndLocked
+    ? `${inBattle.length} candidatos se disputan el 3\u00b0 lugar (el 2\u00b0 ya casi est\u00e1 definido)`
+    : `${inBattle.length} candidatos se disputan el pase a segunda vuelta`;
 
   container.innerHTML = inBattle.map(c => {
-    const p2 = (c.rankProbs[1] || 0) * 100;
     const p1 = (c.rankProbs[0] || 0) * 100;
-    const p3plus = (100 - p1 - p2);
+    const p2 = (c.rankProbs[1] || 0) * 100;
+    const p3 = (c.rankProbs[2] || 0) * 100;
+    const pFocus = (c.rankProbs[focusKey] || 0) * 100;
+    const pOther = Math.max(0, 100 - p1 - p2 - p3);
     const barWidth = (c.projectedPct / maxProj) * 100;
 
-    const intensity = p2 >= 40 ? 'battle-card-hot' : p2 >= 25 ? 'battle-card-warm' : 'battle-card-cool';
+    const intensity = pFocus >= 40 ? 'battle-card-hot' : pFocus >= 20 ? 'battle-card-warm' : 'battle-card-cool';
     const projectedVotes = totalValidEstimate
       ? Math.round(totalValidEstimate * (c.projectedPct / 100))
       : null;
@@ -246,8 +268,8 @@ function renderBattleForSecond(d) {
           <div class="battle-candidate-party">${c.party}</div>
         </div>
         <div class="battle-prob-big">
-          <div class="battle-prob-value">${p2.toFixed(0)}<span class="battle-prob-pct">%</span></div>
-          <div class="battle-prob-label">prob. 2&deg; lugar</div>
+          <div class="battle-prob-value">${pFocus.toFixed(0)}<span class="battle-prob-pct">%</span></div>
+          <div class="battle-prob-label">prob. ${focusRank}&deg; lugar</div>
         </div>
       </div>
 
@@ -263,16 +285,16 @@ function renderBattleForSecond(d) {
 
       <div class="battle-dist">
         <div class="battle-dist-item">
-          <span class="battle-dist-label">P(1&deg;)</span>
-          <span class="battle-dist-value">${p1.toFixed(1)}%</span>
-        </div>
-        <div class="battle-dist-item battle-dist-highlight">
           <span class="battle-dist-label">P(2&deg;)</span>
           <span class="battle-dist-value">${p2.toFixed(1)}%</span>
         </div>
+        <div class="battle-dist-item battle-dist-highlight">
+          <span class="battle-dist-label">P(3&deg;)</span>
+          <span class="battle-dist-value">${p3.toFixed(1)}%</span>
+        </div>
         <div class="battle-dist-item">
-          <span class="battle-dist-label">P(3&deg; o menos)</span>
-          <span class="battle-dist-value">${Math.max(0, p3plus).toFixed(1)}%</span>
+          <span class="battle-dist-label">P(4&deg; o menos)</span>
+          <span class="battle-dist-value">${pOther.toFixed(1)}%</span>
         </div>
         ${projectedVotes !== null ? `
         <div class="battle-dist-item">
